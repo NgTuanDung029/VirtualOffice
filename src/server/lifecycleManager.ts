@@ -39,8 +39,8 @@ export class LifecycleManager {
 
   constructor(options: LifecycleManagerOptions) {
     this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 5000;
-    this.staleSessionTimeoutMs = options.staleSessionTimeoutMs ?? 25000;
-    this.shutdownGracePeriodMs = options.shutdownGracePeriodMs ?? 5000;
+    this.staleSessionTimeoutMs = options.staleSessionTimeoutMs ?? 180000;
+    this.shutdownGracePeriodMs = options.shutdownGracePeriodMs ?? 10000;
     this.initialConnectTimeoutMs = options.initialConnectTimeoutMs ?? 90000;
     this.onShutdownTriggered = options.onShutdownTriggered;
     this.onStateChange = options.onStateChange;
@@ -81,14 +81,14 @@ export class LifecycleManager {
     if (
       typeof config.staleSessionTimeoutMs === 'number' &&
       config.staleSessionTimeoutMs >= 1500 &&
-      config.staleSessionTimeoutMs <= 180000
+      config.staleSessionTimeoutMs <= 600000
     ) {
       this.staleSessionTimeoutMs = config.staleSessionTimeoutMs;
     }
     if (
       typeof config.shutdownGracePeriodMs === 'number' &&
       config.shutdownGracePeriodMs >= 500 &&
-      config.shutdownGracePeriodMs <= 60000
+      config.shutdownGracePeriodMs <= 120000
     ) {
       this.shutdownGracePeriodMs = config.shutdownGracePeriodMs;
     }
@@ -192,10 +192,10 @@ export class LifecycleManager {
     let removedCount = 0;
 
     for (const [tabId, record] of this.tabs.entries()) {
-      // Allow slightly longer tolerance for background/hidden tabs in case browser throttled timers
+      // Allow longer tolerance for background/hidden tabs in case browser throttles timers
       const effectiveTimeout = record.visible
         ? this.staleSessionTimeoutMs
-        : Math.max(this.staleSessionTimeoutMs, Math.min(this.staleSessionTimeoutMs * 1.5, 45000));
+        : Math.max(this.staleSessionTimeoutMs, this.staleSessionTimeoutMs * 1.5);
 
       if (now - record.lastHeartbeatAt > effectiveTimeout) {
         this.tabs.delete(tabId);

@@ -86,9 +86,9 @@ Bấm vào thanh chọn thư mục ở góc trên bên trái:
 - Mỗi tab trình duyệt khi mở ra sẽ có một mã định danh riêng (`tabId`) và gửi tín hiệu nhịp tim định kỳ (**5 giây/lần**) về server.
 - Khi đóng tab, trình duyệt sẽ gửi tín hiệu ngắt kết nối nhanh qua `navigator.sendBeacon`.
 - **Nếu mở nhiều tab**: Đóng 1 tab trong khi các tab khác còn mở sẽ **không** làm tắt server.
-- **Nếu tải lại trang (F5 / Reload)**: Khi tab tải lại và kết nối lại trong thời gian ân hạn 5 giây, lệnh tắt server sẽ tự động được hủy bỏ, đảm bảo trải nghiệm liên tục.
-- **Khi đóng tab cuối cùng**: Server bắt đầu đếm ngược thời gian ân hạn (mặc định 5 giây). Nếu không còn tab nào mở, server sẽ tự động tắt hoàn toàn và giải phóng cổng mạng, không để lại tiến trình chạy ngầm.
-- **Nếu trình duyệt bị tắt đột ngột (Crash)**: Server sẽ tự động phát hiện các phiên không còn gửi nhịp tim sau 25 giây và tự động tắt an toàn.
+- **Nếu tải lại trang (F5 / Reload)**: Khi tab tải lại và kết nối lại trong thời gian ân hạn 10 giây, lệnh tắt server sẽ tự động được hủy bỏ, đảm bảo trải nghiệm liên tục.
+- **Khi đóng tab cuối cùng**: Server bắt đầu đếm ngược thời gian ân hạn (mặc định 10 giây). Nếu không còn tab nào mở, server sẽ tự động tắt hoàn toàn và giải phóng cổng mạng, không để lại tiến trình chạy ngầm.
+- **Nếu trình duyệt bị tắt đột ngột (Crash)**: Server sẽ tự động phát hiện các phiên không còn gửi nhịp tim sau 180 giây (được thiết kế dài để tránh bị ảnh hưởng bởi cơ chế tiết kiệm RAM/pin của trình duyệt khi để im) và tự động tắt an toàn.
 
 ---
 

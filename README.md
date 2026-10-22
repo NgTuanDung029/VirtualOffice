@@ -72,8 +72,8 @@ The local backend (`src/server/lifecycleManager.ts`) tracks active browser tabs 
 - **Periodic Heartbeat**: Active tabs send `POST /api/lifecycle/heartbeat` every **5 seconds** (configurable in Settings).
 - **Immediate Close Notification**: Closing a tab triggers `navigator.sendBeacon('/api/lifecycle/close')` via `pagehide` / `beforeunload`.
 - **Multi-Tab Safety**: If Tab A closes while Tab B remains open (`activeTabCount > 0`), the server continues running uninterrupted.
-- **Reload Survival**: Reloading the last open tab starts a **5-second shutdown grace period**; when the reloaded page registers within the grace window, the pending shutdown is automatically cancelled.
-- **Browser Crash Recovery**: If the browser process terminates unexpectedly without sending a close beacon, stale tab sessions expire after **25 seconds** (configurable), followed by the **5-second** grace period, after which the server shuts down and releases its loopback port.
+- **Reload Survival**: Reloading the last open tab starts a **10-second shutdown grace period**; when the reloaded page registers within the grace window, the pending shutdown is automatically cancelled.
+- **Browser Crash Recovery**: If the browser process terminates unexpectedly without sending a close beacon, stale tab sessions expire after **180 seconds** (configurable), followed by the **10-second** grace period, after which the server shuts down and releases its loopback port.
 
 ---
 

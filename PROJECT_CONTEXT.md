@@ -19,8 +19,8 @@
    - Never fabricates fake metrics. If a metric cannot be determined, it is explicitly reported as `UNSUPPORTED` or `UNAVAILABLE`.
 3. **Tab-Heartbeat Driven Process Lifecycle**:
    - The local server stays alive *only* while at least one browser tab is active.
-   - Browser tabs send continuous heartbeats every 5 seconds and issue `navigator.sendBeacon('/api/lifecycle/unload')` on tab close/unload.
-   - When the final tab disconnects, a 5-second grace period starts. If no tab reconnects within that period, the backend automatically terminates its process (`process.exit(0)`) and frees the loopback port.
+   - Browser tabs send continuous heartbeats every 5 seconds (via Web Worker ticker to survive idle browser throttling) and issue `navigator.sendBeacon('/api/lifecycle/close')` on tab close/unload.
+   - When the final tab disconnects, a 10-second grace period starts. If no tab reconnects within that period, the backend automatically terminates its process (`process.exit(0)`) and frees the loopback port.
 4. **General Chat vs. Project Workspace Dual-Mode**:
    - **New Chat (`+`)** defaults to an empty folder (`projectPath: null`). The session runs in an isolated, clean directory (`%LOCALAPPDATA%\VirtualOffice\workspace-general`) without seeing or interfering with any project files.
    - **Project Mode**: When a user selects a local folder, the chat binds to that folder. Antigravity executes with `cwd = projectFolder`, enabling file attachments, codebase analysis, and code modifications.
@@ -35,6 +35,10 @@
 
 ```
 C:\Duzg\Project\VirtualOffice\
+├── .github/
+│   └── workflows/
+│       └── release.yml                      # GitHub Actions CI/CD: automated Windows build & release
+├── .gitignore                               # Production ignore rules (excludes binaries, node_modules)
 ├── app.ico                                  # Handcrafted multi-resolution Windows icon (16-256px)
 ├── index.html                               # HTML5 entry with retro typography (Silkscreen/Pixelify)
 ├── package.json                             # Dependencies & scripts
@@ -110,10 +114,10 @@ sequenceDiagram
   LM-->>Browser: 200 OK { activeTabCount, shutdownPending: false }
 
   Note over Browser,LM: User closes the tab or navigates away
-  Browser->>LM: POST /api/lifecycle/unload { tabId } (sendBeacon)
-  LM->>LM: activeTabCount == 0 -> startGracePeriod(5000ms)
+  Browser->>LM: POST /api/lifecycle/close { tabId } (sendBeacon)
+  LM->>LM: activeTabCount == 0 -> startGracePeriod(10000ms)
 
-  alt Another tab connects or tab reloads within 5s
+  alt Another tab connects or tab reloads within 10s
     Browser->>LM: POST /api/lifecycle/heartbeat { tabId }
     LM->>LM: cancelGracePeriod() -> server stays alive
   else Grace period expires
@@ -123,7 +127,7 @@ sequenceDiagram
 ```
 
 - Each browser tab generates a unique `tabId` (e.g. `tab-1729560000000-xxxx`).
-- Stale sessions that fail to heartbeat within 25 seconds (e.g., browser hard crash) are automatically swept and pruned.
+- Stale sessions that fail to heartbeat within 180 seconds (e.g., browser hard crash) are automatically swept and pruned, while providing ample buffer against background tab throttling when left idle.
 - The server port (`preferredPort: 48911` with automatic conflict hunting up to `48925`) is cleanly released on exit.
 
 ### 3.2. Real Antigravity CLI Adapter (`agyAdapter.ts`)
@@ -294,9 +298,10 @@ The test suite validates:
 6. Usage provider separation: live `agy` quota vs. clean un-fabricated Demo Mode.
 7. End-to-end installer extraction, launcher duplicate reuse, and live turn execution.
 
-### 6.3. Packaging Windows Executables
+### 6.3. Packaging Windows Executables Locally
 ```bash
-node scripts/package-windows.mjs
+npm run build
+npm run package:win
 ```
 What this script performs:
 1. Cleans and builds `dist-release/VirtualOffice-Portable/`.
@@ -307,6 +312,51 @@ What this script performs:
    - Passes `/win32icon:app.ico` to embed the pixel icon in the PE header.
    - Embeds `app-payload.zip` as an assembly manifest resource.
    - Provides a custom WinForms UI with drive selection, free space validation, pixel banner, and progress bar.
+6. Compresses the portable distribution into `The-Virtual-Office-Portable-win64.zip`.
+
+### 6.4. Creating and Publishing GitHub Releases (.exe & .zip)
+
+Because binary files (`.exe`, `.zip`) are large (~35 MB each) and excluded by `.gitignore`, they must be distributed via **GitHub Releases** instead of direct git commits. Use either of the following two workflows:
+
+#### Workflow A: Manual Upload via GitHub Web (Quickest & Simplest)
+1. Build the latest binaries locally:
+   ```bash
+   npm run build
+   npm run package:win
+   ```
+2. Navigate to your repository on GitHub: `https://github.com/<owner>/<repo>/releases/new`.
+3. Fill in release details:
+   - **Tag**: Select or type `v1.0.0` (or target version) -> click *Create new tag on publish*.
+   - **Title**: `v1.0.0 — The Virtual Office for Your Work`
+   - **Notes**: Summarize latest changes, features, and fixes.
+4. Drag and drop the following two files into the **"Attach binaries by dropping them here"** dropzone:
+   - `VirtualOffice-Setup.exe` (Self-contained Windows installer)
+   - `The-Virtual-Office-Portable-win64.zip` (Standalone portable archive)
+5. Click **Publish release**. Users can now download and run the installer directly.
+
+#### Workflow B: Automated CI/CD via GitHub Actions (`.github/workflows/release.yml`)
+The repository includes an automated GitHub Actions pipeline. Pushing a version tag triggers automated testing, building, packaging, and release publishing on a clean `windows-latest` virtual runner:
+```bash
+# 1. Ensure all changes are committed and pushed to main
+git add .
+git commit -m "feat: prepare v1.0.0 release"
+git push origin main
+
+# 2. Create and push an annotated release tag
+git tag v1.0.0
+git push origin v1.0.0
+```
+GitHub Actions will automatically:
+1. Spin up a Windows virtual environment.
+2. Run test suites (`npm test`) and build assets (`npm run build`).
+3. Compile `VirtualOffice-Setup.exe` with `app.ico` and package `The-Virtual-Office-Portable-win64.zip`.
+4. Create the GitHub Release and attach both binary artifacts automatically.
+
+#### Workflow C: GitHub CLI (`gh release create`)
+If you have the GitHub CLI installed and authenticated:
+```bash
+gh release create v1.0.0 VirtualOffice-Setup.exe The-Virtual-Office-Portable-win64.zip --title "v1.0.0 — The Virtual Office for Your Work" --notes "Release v1.0.0 with standalone installer and portable distribution."
+```
 
 ---
 

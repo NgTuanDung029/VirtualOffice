@@ -55,8 +55,8 @@ export const App: React.FC = () => {
     officeCollapsed: false,
     reducedMotion: false,
     heartbeatIntervalMs: 5000,
-    staleSessionTimeoutMs: 25000,
-    shutdownGracePeriodMs: 5000,
+    staleSessionTimeoutMs: 180000,
+    shutdownGracePeriodMs: 10000,
   });
 
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null);
@@ -298,13 +298,56 @@ export const App: React.FC = () => {
     void register();
 
     const intervalMs = Math.max(1500, settings.heartbeatIntervalMs || 5000);
-    const hbTimer = window.setInterval(() => {
+    let lastHeartbeatTime = Date.now();
+
+    const doHeartbeat = () => {
+      lastHeartbeatTime = Date.now();
       void sendHeartbeat();
+    };
+
+    // Use Web Worker timer when possible to avoid aggressive browser background throttling
+    let cleanupWorker: (() => void) | null = null;
+    try {
+      const workerBlob = new Blob(
+        [
+          `let timer = null;
+           self.onmessage = function(e) {
+             if (e.data === 'start') {
+               if (timer) clearInterval(timer);
+               timer = setInterval(function() { postMessage('tick'); }, ${intervalMs});
+             } else if (e.data === 'stop') {
+               if (timer) clearInterval(timer);
+               timer = null;
+             }
+           };`,
+        ],
+        { type: 'application/javascript' }
+      );
+      const workerUrl = URL.createObjectURL(workerBlob);
+      const worker = new Worker(workerUrl);
+      worker.onmessage = () => {
+        doHeartbeat();
+      };
+      worker.postMessage('start');
+      cleanupWorker = () => {
+        worker.postMessage('stop');
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+      };
+    } catch {
+      // Fallback handled below by window.setInterval
+    }
+
+    const hbTimer = window.setInterval(() => {
+      if (!cleanupWorker) {
+        doHeartbeat();
+      }
     }, intervalMs);
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void sendHeartbeat();
+    const handleResumeOrFocus = () => {
+      const now = Date.now();
+      if (now - lastHeartbeatTime >= 3000) {
+        doHeartbeat();
       }
     };
 
@@ -323,16 +366,27 @@ export const App: React.FC = () => {
       }
     };
 
-    const onPageHide = () => handlePageUnload('pagehide');
+    const onPageHide = (e: PageTransitionEvent) => {
+      // If persisted in BFCache / tab suspension, do not treat as closed
+      if (e.persisted) return;
+      handlePageUnload('pagehide');
+    };
     const onBeforeUnload = () => handlePageUnload('beforeunload');
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleResumeOrFocus);
+    window.addEventListener('focus', handleResumeOrFocus);
+    window.addEventListener('pointerdown', handleResumeOrFocus);
+    window.addEventListener('keydown', handleResumeOrFocus);
     window.addEventListener('pagehide', onPageHide);
     window.addEventListener('beforeunload', onBeforeUnload);
 
     return () => {
+      if (cleanupWorker) cleanupWorker();
       window.clearInterval(hbTimer);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleResumeOrFocus);
+      window.removeEventListener('focus', handleResumeOrFocus);
+      window.removeEventListener('pointerdown', handleResumeOrFocus);
+      window.removeEventListener('keydown', handleResumeOrFocus);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('beforeunload', onBeforeUnload);
     };

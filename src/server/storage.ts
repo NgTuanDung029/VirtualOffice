@@ -26,8 +26,8 @@ const DEFAULT_SETTINGS: ApplicationSettings = {
   officeCollapsed: false,
   reducedMotion: false,
   heartbeatIntervalMs: 5000,
-  staleSessionTimeoutMs: 25000,
-  shutdownGracePeriodMs: 5000,
+  staleSessionTimeoutMs: 180000,
+  shutdownGracePeriodMs: 10000,
 };
 
 export class StorageManager {
@@ -88,8 +88,18 @@ export class StorageManager {
       if (fs.existsSync(this.configPath)) {
         const raw = fs.readFileSync(this.configPath, 'utf-8');
         const parsed = JSON.parse(raw);
+        const settings: ApplicationSettings = { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) };
+        if (
+          !parsed.settings?.staleSessionTimeoutMs ||
+          parsed.settings.staleSessionTimeoutMs < 120000
+        ) {
+          settings.staleSessionTimeoutMs = DEFAULT_SETTINGS.staleSessionTimeoutMs;
+        }
+        if (parsed.settings?.shutdownGracePeriodMs === 5000) {
+          settings.shutdownGracePeriodMs = DEFAULT_SETTINGS.shutdownGracePeriodMs;
+        }
         return {
-          settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+          settings,
           selectedProjectPath:
             typeof parsed.selectedProjectPath === 'string'
               ? parsed.selectedProjectPath
