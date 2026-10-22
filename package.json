@@ -1,0 +1,30 @@
+{
+  "name": "virtual-office-for-your-work",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The Virtual Office for Your Work — Local Windows AI Coding Workspace & Animated Pixel-Art Virtual Office with Antigravity Integration",
+  "type": "module",
+  "scripts": {
+    "dev:client": "vite",
+    "build:client": "vite build",
+    "build:server": "node scripts/build-server.mjs",
+    "build": "npm run build:client && npm run build:server",
+    "start": "node dist/server/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "package:win": "node scripts/package-windows.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "esbuild": "^0.24.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}

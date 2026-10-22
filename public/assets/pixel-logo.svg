@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- Cozy Pixel Art Monitor & Lamp Icon -->
+  <rect x="1" y="2" width="14" height="10" fill="#2b213a"/>
+  <rect x="2" y="3" width="12" height="8" fill="#181425"/>
+  <!-- Screen code lines -->
+  <rect x="3" y="4" width="5" height="1" fill="#63c74d"/>
+  <rect x="3" y="6" width="8" height="1" fill="#feae34"/>
+  <rect x="3" y="8" width="6" height="1" fill="#2ce8f5"/>
+  <rect x="10" y="8" width="2" height="1" fill="#ff0044"/>
+  <!-- Monitor stand -->
+  <rect x="6" y="12" width="4" height="2" fill="#5a6988"/>
+  <rect x="4" y="14" width="8" height="1" fill="#8b9bb4"/>
+</svg>
